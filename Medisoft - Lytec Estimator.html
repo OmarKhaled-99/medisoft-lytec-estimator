@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upgrade Time Estimator · Microwize</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    /* ─── DARK THEME (default) ─── */
+    :root, [data-theme="dark"] {
+      --bg: #0d0f14;
+      --surface: #13161e;
+      --surface2: #1a1e29;
+      --border: rgba(255,255,255,0.07);
+      --text: #e8eaf0;
+      --muted: #6b7280;
+      --muted2: #9ca3af;
+      --accent: #2E64BF;
+      --accent-light: #4a82d8;
+      --accent-glow: rgba(46,100,191,0.15);
+      --danger: #f87171;
+      --green: #6ee7b7;
+      --grid-color: rgba(46,100,191,0.04);
+      --banner-bg: linear-gradient(135deg, #1a2238 0%, #0f1828 100%);
+      --banner-border: rgba(46,100,191,0.3);
+      --banner-glow: rgba(46,100,191,0.12);
+      --result-text: #fff;
+      --code-bg: rgba(46,100,191,0.12);
+    }
+
+    /* ─── LIGHT THEME ─── */
+    [data-theme="light"] {
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --surface2: #eef1f8;
+      --border: rgba(0,0,0,0.09);
+      --text: #111827;
+      --muted: #6b7280;
+      --muted2: #4b5563;
+      --accent: #2E64BF;
+      --accent-light: #1a4fa0;
+      --accent-glow: rgba(46,100,191,0.08);
+      --danger: #dc2626;
+      --green: #059669;
+      --grid-color: rgba(46,100,191,0.03);
+      --banner-bg: linear-gradient(135deg, #dce6f5 0%, #cddaf0 100%);
+      --banner-border: rgba(46,100,191,0.2);
+      --banner-glow: rgba(46,100,191,0.07);
+      --result-text: #111827;
+      --code-bg: rgba(46,100,191,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 0.3s;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 44px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      height: 38px;
+    }
+
+    .logo-wrap svg { height: 38px; width: auto; }
+
+    /* Theme toggle button */
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 14px 6px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted2);
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.2s, color 0.2s, background 0.3s;
+      white-space: nowrap;
+    }
+
+    .theme-toggle:hover { border-color: var(--accent); color: var(--text); }
+    .theme-toggle-icon { font-size: 15px; line-height: 1; }
+
+    /* ── Header ── */
+    .header {
+      margin-bottom: 36px;
+      animation: fadeUp 0.5s ease 0.05s both;
+    }
+
+    .header-eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-eyebrow::before {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(26px, 4vw, 38px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1.1;
+    }
+
+    .header-sub {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--muted2);
+      line-height: 1.6;
+      max-width: 480px;
+    }
+
+    /* ── Grid ── */
+    .grid { display: grid; gap: 20px; }
+
+    @media (min-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      animation: fadeUp 0.5s ease both;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    [data-theme="dark"] .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(46,100,191,0.4), transparent);
+    }
+
+    .card:nth-child(1) { animation-delay: 0.1s; }
+    .card:nth-child(2) { animation-delay: 0.2s; }
+
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    [data-theme="dark"] .card-dot { box-shadow: 0 0 8px var(--accent); }
+
+    .card-dot.green { background: var(--green); }
+    [data-theme="dark"] .card-dot.green { box-shadow: 0 0 8px var(--green); }
+
+    /* ── Section ── */
+    .section { margin-bottom: 22px; }
+    .section:last-child { margin-bottom: 0; }
+
+    .label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 9px;
+    }
+
+    /* ── Product Toggle ── */
+    .product-toggle {
+      display: flex;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 3px;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .product-btn {
+      flex: 1;
+      padding: 9px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .product-btn.active {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(46,100,191,0.3);
+    }
+
+    .product-btn:not(.active):hover { color: var(--text); }
+
+    /* ── Version Row ── */
+    .version-row { display: grid; grid-template-columns: 1fr 32px 1fr; align-items: end; }
+
+    .version-sub-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .version-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 10px 28px 10px 12px;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      transition: border-color 0.15s, background 0.3s, color 0.3s;
+    }
+
+    .select:focus { outline: none; border-color: var(--accent); }
+    [data-theme="dark"] .select option { background: #1a1e29; }
+    [data-theme="light"] .select option { background: #ffffff; }
+
+    /* ── Radio Cards ── */
+    .radio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .radio-card { position: relative; cursor: pointer; }
+
+    .radio-card input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+
+    .radio-inner {
+      display: flex;
+      flex-direction: column;
+      padding: 11px 13px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface2);
+      transition: all 0.18s ease;
+      gap: 3px;
+    }
+
+    .radio-card input:checked + .radio-inner {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    .radio-card:hover .radio-inner { border-color: rgba(46,100,191,0.4); }
+
+    .radio-label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .radio-mult { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+    /* ── Number Input ── */
+    .input-number-wrap {
+      display: flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface2);
+      overflow: hidden;
+      transition: border-color 0.15s, background 0.3s;
+    }
+
+    .input-number-wrap:focus-within { border-color: var(--accent); }
+
+    .input-number-btn {
+      width: 38px; height: 40px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .input-number-btn:hover { color: var(--text); background: rgba(128,128,128,0.07); }
+
+    .input-number {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 15px;
+      font-weight: 500;
+      text-align: center;
+      padding: 8px 0;
+      min-width: 0;
+    }
+
+    .input-number:focus { outline: none; }
+    .input-number::-webkit-inner-spin-button,
+    .input-number::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    /* ── Toggle Row ── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 13px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface2);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.3s;
+      gap: 12px;
+      user-select: none;
+    }
+
+    .toggle-row:hover { border-color: rgba(46,100,191,0.35); }
+
+    .toggle-row-text { font-size: 13px; font-weight: 500; color: var(--text); }
+    .toggle-row-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      left: 2px; top: 2px;
+      background: var(--muted);
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+
+    input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+    input:checked + .toggle-track::after { transform: translateX(16px); background: #fff; }
+
+    .addons-group { display: grid; gap: 8px; margin-top: 8px; }
+
+    .clinical-section {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+
+    .clinical-header {
+      padding: 9px 13px;
+      background: rgba(128,128,128,0.05);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .clinical-body .toggle-row {
+      border: none;
+      border-bottom: 1px solid var(--border);
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .clinical-body .toggle-row:last-child { border-bottom: none; }
+
+    /* ── Results ── */
+    .result-banner {
+      background: var(--banner-bg);
+      border: 1px solid var(--banner-border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .result-banner::before {
+      content: '';
+      position: absolute;
+      top: -50px; right: -50px;
+      width: 160px; height: 160px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--banner-glow), transparent 70%);
+      pointer-events: none;
+    }
+
+    .result-kicker {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .result-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 52px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: var(--result-text);
+      line-height: 1;
+      margin: 10px 0 8px;
+      transition: color 0.3s;
+    }
+
+    .result-desc {
+      font-size: 13px;
+      color: var(--muted2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .jump-badge {
+      display: inline-flex;
+      align-items: center;
+      background: var(--accent-glow);
+      border: 1px solid var(--banner-border);
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      padding: 2px 9px;
+      border-radius: 999px;
+    }
+
+    .zero-warning {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--danger);
+      padding: 10px 13px;
+      background: rgba(220,38,38,0.06);
+      border: 1px solid rgba(220,38,38,0.18);
+      border-radius: 9px;
+      margin-top: 8px;
+    }
+
+    /* ── Breakdown ── */
+    .breakdown { display: grid; gap: 8px; }
+
+    .break-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 15px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface2);
+      gap: 12px;
+      transition: border-color 0.15s, background 0.3s;
+    }
+
+    .break-row:hover { border-color: rgba(46,100,191,0.3); }
+
+    .break-row-left { flex: 1; min-width: 0; }
+    .break-row-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .break-row-hint { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+    .break-row-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .break-row-val.off { color: var(--muted); font-size: 12px; }
+
+    /* ── Info box ── */
+    .info-box {
+      margin-top: 16px;
+      padding: 13px 15px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: rgba(128,128,128,0.03);
+      transition: background 0.3s, border-color 0.3s;
+    }
+
+    .info-box-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .info-box p { font-size: 12px; color: var(--muted2); line-height: 1.65; }
+
+    code {
+      font-family: 'DM Mono', monospace;
+      background: var(--code-bg);
+      color: var(--accent);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+      transition: background 0.3s;
+    }
+
+    .divider { height: 1px; background: var(--border); margin: 18px 0; transition: background 0.3s; }
+    .help-text { font-size: 11.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      animation: fadeUp 0.5s ease 0.3s both;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
+
+    /* ─── Constants ─── */
+    const PRODUCTS = {
+      medisoft: {
+        label: "Medisoft",
+        versionPrefix: "v",
+        min: 9,
+        latest: 30,
+        jumpSize: 3,
+        baseFormula: (j) => 0.5 * j + 0.5,
+        practicesOffset: 0.5,
+      },
+      lytec: {
+        label: "Lytec",
+        versionPrefix: "",
+        min: 2005,
+        latest: 2026,
+        jumpSize: 3,
+        baseFormula: (j) => 0.5 * j + 0.75,
+        practicesOffset: 0.75,
+      },
+    };
+
+    const PRACTICE_TIERS = [
+      { key: "p1", label: "1–4",  fullLabel: "1–4 practices",  multiplier: 1 },
+      { key: "p2", label: "5–8",  fullLabel: "5–8 practices",  multiplier: 2 },
+      { key: "p3", label: "9–12", fullLabel: "9–12 practices", multiplier: 3 },
+      { key: "p4", label: "13+",  fullLabel: "13+ practices",  multiplier: 4 },
+    ];
+
+    /* ─── Helpers ─── */
+    const clamp = (n, mn, mx) => Math.max(mn, Math.min(mx, Number.isFinite(n) ? Math.trunc(n) : mn));
+    const ceilDiv = (a, b) => Math.ceil(a / b);
+
+    function fmtHours(h) {
+      const r = Math.round(h * 2) / 2;
+      return `${r.toFixed(r % 1 === 0 ? 0 : 1)} h`;
+    }
+
+    function computePracticeHours(product, jumps, multiplier) {
+      const base = product.baseFormula(jumps);
+      return multiplier === 1 ? base : base * multiplier - product.practicesOffset;
+    }
+
+    function wsHoursCalc(ws) { return Math.max(0, Math.trunc(ws)) * 0.5; }
+
+    /* ─── Microwize Logo (inline SVG) ─── */
+    function MicrowizeLogo() {
+      return (
+        <svg height="36" viewBox="0 0 616.3 142.5" xmlns="http://www.w3.org/2000/svg" aria-label="Microwize">
+          <circle fill="#FFC831" cx="71.3" cy="71.3" r="71.3"/>
+          <path fill="#2E64BF" d="M122.2,64.4v38.2H98.6V70.5c0-6.2-2.2-10-7.6-10c-6.3,0-7.9,5-7.9,10.4v31.8H59.4V70.5c0-6.2-2.2-10-7.6-10c-6.3,0-7.9,5-7.9,10.4v31.8H20.3v-62L39.7,40c1.5,2.9,2.8,9.2,2.8,11.7h0.4c2.8-6.8,8-11.8,18.1-11.8c10.9,0,17.3,5.5,20.2,13.5c2.5-7.9,7.9-13.5,18.9-13.5C115.5,39.9,122.2,50.9,122.2,64.4z"/>
+          <path fill="#2E64BF" d="M144.6,35.1c-8.3,0-14.7-5.8-14.7-14.1s6.4-14.2,14.7-14.2s14.8,5.9,14.8,14.2S152.8,35.1,144.6,35.1z"/>
+          <path fill="#2E64BF" d="M193.3,62.4c2.7-2.3,6-2.5,7.9-2.5c7.9,0,13.7,4.7,15,6.3l10.5-14.7c-2.2-3.3-11-10.6-27.3-10.6c-5.5,0-17.9,0.5-26.6,10.3c-6.9,7.8-7.4,17.1-7.5,20.6c0,18.3,11.9,31.7,34,31.7c16.3,0,25.1-7.4,27.3-10.6l-10.5-14.7c-1.3,1.6-7.1,6.3-15,6.3c-1.9,0-5.2-0.2-7.9-2.5C188,77.4,188,66.9,193.3,62.4z"/>
+          <path fill="#2E64BF" d="M283,42.4l-6.3,22.5c-2.6-2.1-5.2-3-8.3-3c-6.7,0-10.9,4.9-10.9,13v27.8h-23.6v-62l19.4-0.7c1.6,3.4,2.8,10.5,2.8,13h0.4c2.2-7.5,7-13.1,16.4-13.1C277.1,39.9,280,40.8,283,42.4z"/>
+          <path fill="#2E64BF" d="M350.4,71.5c0,18.5-13.1,31.9-33.2,31.9S283.9,90,283.9,71.5s13.1-31.7,33.2-31.7S350.4,53,350.4,71.5z M326.5,71.5c0-7.6-3.3-12.5-9.3-12.5s-9.3,4.9-9.3,12.5s3.3,12.7,9.3,12.7S326.5,79.1,326.5,71.5z"/>
+          <path fill="#2E64BF" d="M453.8,40.7l-16.8,62h-26.7L405,81.2c-0.5-2.4-1.3-7.5-1.4-9.2h-0.5c-0.1,1.7-0.9,6.8-1.5,9.2l-5.2,21.4h-26.7l-16.8-62h23.9l5.8,30.9c0.7,3.6,0.8,5.7,1.2,9.5h0.5c0.5-3.8,0.8-5.9,1.7-9.5l7.5-30.9h19.7l7.4,30.9c0.8,3.4,1.6,7.2,1.8,9.5h0.5c0.3-2.4,0.7-6,1.5-9.5l5.5-30.9H453.8z"/>
+          <path fill="#2E64BF" d="M471.9,35.1c-8.3,0-14.7-5.8-14.7-14.1s6.4-14.2,14.7-14.2s14.8,5.9,14.8,14.2S480.2,35.1,471.9,35.1z"/>
+          <path fill="#2E64BF" d="M492.9,86.5l26.7-25.3c1.4-1.4,2-2,3.2-2.9l-0.1-0.5c-1.3,0.1-4.2,0.4-9.1,0.4H494V40.7h55.3v16.2l-25.8,25.5c-1.7,1.7-2.5,2.4-3,2.8l0.3,0.5c1.2-0.1,3.5-0.4,8-0.4h21.3v17.5h-57.1L492.9,86.5z"/>
+          <path fill="#2E64BF" d="M617.4,93.1c-2.8,3.7-11.7,10.4-27.5,10.4c-21.9,0-34.4-13.4-34.4-31.8s12.9-31.8,32.5-31.8c18.1,0,28.9,12.1,28.9,29.4c0,4.3-0.7,7.2-0.7,7.2h-37.2c1.7,5.5,5.9,9.7,13.9,9.7s12.2-3.9,14.6-6L617.4,93.1z M578.4,66.3h17.9c-0.3-4.7-2.9-9.2-8.3-9.2C583.5,57.1,579.5,59.4,578.4,66.3z"/>
+          <path fill="#2E64BF" d="M132.5,40h10.4c7.5,0,13.6,6.1,13.6,13.6V103h-24V40H132.5z"/>
+          <path fill="#2E64BF" d="M483.5,103h-24V53.6c0-7.5,6.1-13.6,13.6-13.6h10.4V103H483.5z"/>
+        </svg>
+      );
+    }
+
+    /* ─── Components ─── */
+    function ToggleRow({ checked, onChange, label, sub }) {
+      return (
+        <label className="toggle-row">
+          <div>
+            <div className="toggle-row-text">{label}</div>
+            {sub && <div className="toggle-row-sub">{sub}</div>}
+          </div>
+          <div className="toggle-switch">
+            <input type="checkbox" checked={checked} onChange={onChange} />
+            <span className="toggle-track" />
+          </div>
+        </label>
+      );
+    }
+
+    function BreakRow({ label, value, hint, isOff }) {
+      return (
+        <div className="break-row">
+          <div className="break-row-left">
+            <div className="break-row-title">{label}</div>
+            {hint && <div className="break-row-hint">{hint}</div>}
+          </div>
+          <div className={`break-row-val${isOff ? " off" : ""}`}>{isOff ? "— off" : value}</div>
+        </div>
+      );
+    }
+
+    /* ─── App ─── */
+    function App() {
+      const [theme, setTheme] = useState("dark");
+      const [productKey, setProductKey] = useState("medisoft");
+      const product = PRODUCTS[productKey];
+
+      const [fromVersion, setFromVersion] = useState(product.min);
+      const [toVersion, setToVersion] = useState(product.latest);
+      const [tierKey, setTierKey] = useState("p1");
+      const [workstations, setWorkstations] = useState(4);
+
+      const [addons, setAddons] = useState({
+        includeWorkstations: true,
+        clinicalServer: false,
+        clinicalWorkstations: false,
+      });
+
+      useEffect(() => {
+        document.documentElement.setAttribute("data-theme", theme);
+      }, [theme]);
+
+      useEffect(() => {
+        setFromVersion((p) => clamp(p, PRODUCTS[productKey].min, PRODUCTS[productKey].latest));
+        setToVersion((p) => clamp(p, PRODUCTS[productKey].min, PRODUCTS[productKey].latest));
+      }, [productKey]);
+
+      const versionList = useMemo(() => {
+        const list = [];
+        for (let v = product.min; v <= product.latest; v++) list.push(v);
+        return list;
+      }, [product.min, product.latest]);
+
+      const tier = PRACTICE_TIERS.find((t) => t.key === tierKey) ?? PRACTICE_TIERS[0];
+
+      const { jumps, baseHours, wsHours, clinicalHours, total } = useMemo(() => {
+        const f = clamp(fromVersion, product.min, product.latest);
+        const t = clamp(toVersion, product.min, product.latest);
+        const diff = Math.max(0, t - f);
+        const j = diff === 0 ? 0 : ceilDiv(diff, product.jumpSize);
+        const base = computePracticeHours(product, j, tier.multiplier);
+        const ws = addons.includeWorkstations ? wsHoursCalc(workstations) : 0;
+        const clinSrv = addons.clinicalServer ? 1.0 : 0;
+        const clinWs = addons.clinicalWorkstations ? wsHoursCalc(workstations) : 0;
+        const clin = clinSrv + clinWs;
+        return { jumps: j, baseHours: base, wsHours: ws, clinicalHours: clin, total: base + ws + clin };
+      }, [product, fromVersion, toVersion, tier.multiplier, workstations, addons]);
+
+      const fromLabel = `${product.versionPrefix}${fromVersion}`;
+      const toLabel   = `${product.versionPrefix}${toVersion}`;
+      const isInvalid = toVersion <= fromVersion;
+      const isDark    = theme === "dark";
+
+      const adjustWs = (d) => setWorkstations((w) => Math.max(0, w + d));
+
+      return (
+        <div className="page">
+
+          {/* Top Bar */}
+          <div className="topbar">
+            <div className="logo-wrap"><MicrowizeLogo /></div>
+            <button
+              className="theme-toggle"
+              onClick={() => setTheme(isDark ? "light" : "dark")}
+              aria-label="Toggle theme"
+            >
+              <span className="theme-toggle-icon">{isDark ? "☀️" : "🌙"}</span>
+              {isDark ? "Light mode" : "Dark mode"}
+            </button>
+          </div>
+
+          {/* Header */}
+          <header className="header">
+            <div className="header-eyebrow">Upgrade Time Estimator</div>
+            <h1>How long will<br/>your upgrade take?</h1>
+            <p className="header-sub">
+              Estimates total effort for Medisoft and Lytec upgrades based on version jumps, practice size, and optional add-ons.
+            </p>
+          </header>
+
+          {/* Main Grid */}
+          <div className="grid">
+
+            {/* ── Inputs Card ── */}
+            <div className="card">
+              <div className="card-title"><span className="card-dot" />Configuration</div>
+
+              <div className="section">
+                <label className="label">Product</label>
+                <div className="product-toggle">
+                  {Object.entries(PRODUCTS).map(([k, p]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      className={`product-btn${k === productKey ? " active" : ""}`}
+                      onClick={() => setProductKey(k)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="section">
+                <label className="label">Version Range</label>
+                <div className="version-row">
+                  <div>
+                    <div className="version-sub-label">From</div>
+                    <select className="select" value={fromVersion} onChange={(e) => setFromVersion(parseInt(e.target.value, 10))}>
+                      {versionList.map((v) => <option key={v} value={v}>{product.versionPrefix}{v}</option>)}
+                    </select>
+                  </div>
+                  <div className="version-arrow">→</div>
+                  <div>
+                    <div className="version-sub-label">To</div>
+                    <select className="select" value={toVersion} onChange={(e) => setToVersion(parseInt(e.target.value, 10))}>
+                      {versionList.map((v) => <option key={v} value={v}>{product.versionPrefix}{v}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {isInvalid && (
+                  <div className="zero-warning">
+                    <span>⚠</span> "To" must be greater than "From" for a non-zero estimate.
+                  </div>
+                )}
+              </div>
+
+              <div className="section">
+                <label className="label">Practice Size</label>
+                <div className="radio-grid">
+                  {PRACTICE_TIERS.map((t) => (
+                    <label key={t.key} className="radio-card">
+                      <input type="radio" name="tier" value={t.key} checked={tierKey === t.key} onChange={() => setTierKey(t.key)} />
+                      <div className="radio-inner">
+                        <span className="radio-label">{t.label}</span>
+                        <span className="radio-mult">×{t.multiplier} multiplier</span>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="section">
+                <label className="label">Workstations</label>
+                <div className="input-number-wrap">
+                  <button className="input-number-btn" type="button" onClick={() => adjustWs(-1)}>−</button>
+                  <input
+                    className="input-number"
+                    type="number"
+                    min="0"
+                    value={workstations}
+                    onChange={(e) => setWorkstations(parseInt(e.target.value || "0", 10))}
+                  />
+                  <button className="input-number-btn" type="button" onClick={() => adjustWs(1)}>+</button>
+                </div>
+                <p className="help-text">0.5 h per workstation when installation is enabled.</p>
+              </div>
+
+              <div className="section">
+                <label className="label">Add-ons</label>
+                <div className="addons-group">
+                  <ToggleRow
+                    checked={addons.includeWorkstations}
+                    onChange={(e) => setAddons((a) => ({ ...a, includeWorkstations: e.target.checked }))}
+                    label="Workstation installation"
+                    sub="Software install on each workstation"
+                  />
+                  <div className="clinical-section">
+                    <div className="clinical-header">Clinical / MD (if applicable)</div>
+                    <div className="clinical-body">
+                      <ToggleRow
+                        checked={addons.clinicalServer}
+                        onChange={(e) => setAddons((a) => ({ ...a, clinicalServer: e.target.checked }))}
+                        label="Clinical server"
+                        sub="+1.0 h flat"
+                      />
+                      <ToggleRow
+                        checked={addons.clinicalWorkstations}
+                        onChange={(e) => setAddons((a) => ({ ...a, clinicalWorkstations: e.target.checked }))}
+                        label="Clinical workstations"
+                        sub="0.5 h each"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Results Card ── */}
+            <div className="card">
+              <div className="card-title"><span className="card-dot green" />Estimate</div>
+
+              <div className="result-banner">
+                <div className="result-kicker">Total estimated time</div>
+                <div className="result-value">{fmtHours(total)}</div>
+                <div className="result-desc">
+                  <span>{fromLabel} → {toLabel}</span>
+                  <span className="jump-badge">{jumps} jump{jumps !== 1 ? "s" : ""}</span>
+                </div>
+              </div>
+
+              <div className="breakdown">
+                <BreakRow
+                  label="Base upgrade effort"
+                  value={fmtHours(baseHours)}
+                  hint={`${tier.fullLabel} · ${product.label} formula`}
+                />
+                <BreakRow
+                  label="Workstation installation"
+                  value={fmtHours(wsHours)}
+                  hint={addons.includeWorkstations ? `${workstations} workstation(s)` : ""}
+                  isOff={!addons.includeWorkstations}
+                />
+                <BreakRow
+                  label="Clinical / MD add-on"
+                  value={fmtHours(clinicalHours)}
+                  hint={
+                    addons.clinicalServer && addons.clinicalWorkstations ? "Server + workstations"
+                    : addons.clinicalServer ? "Server only"
+                    : addons.clinicalWorkstations ? "Workstations only"
+                    : ""
+                  }
+                  isOff={!addons.clinicalServer && !addons.clinicalWorkstations}
+                />
+              </div>
+
+              <div className="info-box">
+                <div className="info-box-title">How jumps are calculated</div>
+                <p>
+                  Jumps = <code>ceil((To − From) / {product.jumpSize})</code>. Each group of {product.jumpSize} versions counts as one jump.
+                  So {fromLabel} → {toLabel} = <strong style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: "var(--accent)" }}>{jumps} jump{jumps !== 1 ? "s" : ""}</strong>.
+                </p>
+              </div>
+
+              <div className="divider" />
+
+              <p style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.6 }}>
+                Tip: When a new version ships, update the <code>latest</code> value inside the <code>PRODUCTS</code> constant at the top of this file.
+              </p>
+            </div>
+          </div>
+
+          <div className="footer">
+            © Microwize Technology · Upgrade Time Estimator
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
